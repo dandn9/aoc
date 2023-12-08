@@ -6,12 +6,14 @@ fn main() {
     let result_1 = solve_1(input_1);
     println!("{result_1}");
     println!("---RESULT_2---");
+    let result_2 = solve_2(input_1);
+    println!("{result_2}");
 }
 
 #[derive(Debug, Clone)]
 struct MapRange {
     start: Range<u64>,
-    end_start: u64,
+    end: Range<u64>,
 }
 
 impl PartialEq for MapRange {
@@ -43,7 +45,7 @@ fn solve_1(input: &str) -> u64 {
     // process the blocks
     let mut blocks: VecDeque<Vec<MapRange>> = VecDeque::new();
 
-    for (index, rule_line) in rules.iter().enumerate() {
+    for (_, rule_line) in rules.iter().enumerate() {
         // this is fine since its always ascii chars
         if rule_line[rule_line.len() - 1..rule_line.len()] == *":" {
             // block start
@@ -60,7 +62,10 @@ fn solve_1(input: &str) -> u64 {
                         start,
                         end: start + span,
                     },
-                    end_start: end,
+                    end: Range {
+                        start: end,
+                        end: end + span,
+                    },
                 })
             }
         }
@@ -77,20 +82,105 @@ fn solve_1(input: &str) -> u64 {
                 && !transform[t_index].start.contains(seed)
                 && transform[t_index].start.end < *seed
             {
-                println!(
-                    "UPPING THE TX_INDEX - {t_index} {seed} {}",
-                    transform[t_index].start.end
-                );
                 t_index += 1;
             }
             if t_index < transform.len() && transform[t_index].start.contains(seed) {
-                *seed = transform[t_index].end_start + (*seed - transform[t_index].start.start)
+                *seed = transform[t_index].end.start + (*seed - transform[t_index].start.start)
             } else {
                 continue;
             }
         }
     }
-    println!("{seeds:?}");
 
     *seeds.iter().min().unwrap()
+}
+
+fn solve_2(input: &str) -> u64 {
+    let mut lines = input.lines();
+
+    let mut seeds: Vec<Range<u64>> = vec![];
+    for (index, str) in lines.next().unwrap()[7..].split_whitespace().enumerate() {
+        if index % 2 == 0 {
+            seeds.push(Range {
+                start: str.parse().unwrap(),
+                end: str.parse().unwrap(),
+            });
+        } else {
+            if let Some(last) = seeds.last_mut() {
+                last.end += str.parse::<u64>().unwrap();
+            }
+        }
+    }
+    seeds.sort_by(|a, b| a.start.cmp(&b.start));
+
+    let rules: Vec<_> = lines.skip(1).filter(|l| !l.is_empty()).collect();
+    // // process the blocks
+    let mut blocks: VecDeque<Vec<MapRange>> = VecDeque::new();
+
+    for (_, rule_line) in rules.iter().enumerate() {
+        // this is fine since its always ascii chars
+        if rule_line[rule_line.len() - 1..rule_line.len()] == *":" {
+            // block start
+            blocks.push_back(vec![]);
+        } else {
+            let mut lines = rule_line.split_whitespace();
+            let end = lines.next().unwrap().parse::<u64>().unwrap();
+            let start = lines.next().unwrap().parse::<u64>().unwrap();
+            let span = lines.next().unwrap().parse::<u64>().unwrap();
+
+            if let Some(last_blocks) = blocks.get_mut(blocks.len() - 1) {
+                last_blocks.push(MapRange {
+                    start: Range {
+                        start,
+                        end: start + span,
+                    },
+                    end: Range {
+                        start: end,
+                        end: end + span,
+                    },
+                })
+            }
+        }
+    }
+    // Sort by end
+    blocks
+        .iter_mut()
+        .for_each(|el| el.sort_by(|a, b| a.end.start.cmp(&b.end.start)));
+
+    // Find the shortest path by going in reverse
+    let mut result = u64::MAX;
+    for num in 0..blocks
+        .get(blocks.len() - 1)
+        .unwrap()
+        .last()
+        .unwrap()
+        .end
+        .end
+    {
+        let mut curr_num = num;
+        let mut blocks_index = (blocks.len() - 1) as i32;
+        while blocks_index >= 0 {
+            let curr_block = blocks.get(blocks_index as usize).unwrap();
+
+            for rule in curr_block.iter() {
+                if curr_num < rule.end.start {
+                    break;
+                }
+                if rule.end.contains(&curr_num) {
+                    curr_num = rule.start.start + (curr_num - rule.end.start);
+                    break;
+                }
+            }
+
+            blocks_index -= 1;
+        }
+
+        for seed_range in seeds.iter() {
+            if seed_range.contains(&curr_num) {
+                result = u64::min(result, num);
+            };
+        }
+    }
+
+    result
 }
