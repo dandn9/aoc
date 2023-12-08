@@ -47,9 +47,6 @@ fn solve_1(input: &str) -> u64 {
         // this is fine since its always ascii chars
         if rule_line[rule_line.len() - 1..rule_line.len()] == *":" {
             // block start
-            if let Some(last_blocks) = blocks.get_mut((blocks.len() as i32 - 1) as usize) {
-                last_blocks.sort()
-            }
             blocks.push_back(vec![]);
         } else {
             let mut lines = rule_line.split_whitespace();
@@ -69,11 +66,11 @@ fn solve_1(input: &str) -> u64 {
         }
     }
 
-    println!("BLOCKS LEN {} \n\n {blocks:?} - {seeds:?}", blocks.len());
     // Consume the blocks and transform the numbers
     while blocks.len() > 0 {
-        let transform = blocks.pop_front().unwrap();
+        let mut transform = blocks.pop_front().unwrap();
         let mut t_index = 0;
+        transform.sort();
         seeds.sort();
         for seed in seeds.iter_mut() {
             while t_index < transform.len()
