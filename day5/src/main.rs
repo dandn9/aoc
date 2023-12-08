@@ -1,40 +1,7 @@
-use std::ops::Range;
+use std::{collections::VecDeque, ops::Range};
 
 fn main() {
-    let input_1 = r#"seeds: 79 14 55 13
-
-seed-to-soil map:
-50 98 2
-52 50 48
-
-soil-to-fertilizer map:
-0 15 37
-37 52 2
-39 0 15
-
-fertilizer-to-water map:
-49 53 8
-0 11 42
-42 0 7
-57 7 4
-
-water-to-light map:
-88 18 7
-18 25 70
-
-light-to-temperature map:
-45 77 23
-81 45 19
-68 64 13
-
-temperature-to-humidity map:
-0 69 1
-1 0 69
-
-humidity-to-location map:
-60 56 37
-56 93 4"#;
-
+    let input_1 = include_str!("input_1.txt");
     println!("---RESULT_1---");
     let result_1 = solve_1(input_1);
     println!("{result_1}");
@@ -43,71 +10,90 @@ humidity-to-location map:
 
 #[derive(Debug, Clone)]
 struct MapRange {
-    start: Range<u32>,
-    end: Range<u32>,
+    start: Range<u64>,
+    end_start: u64,
 }
 
 impl PartialEq for MapRange {
     fn eq(&self, other: &Self) -> bool {
-        // no idea why i have to clone :\
-        self.start.clone().eq(other.start.clone())
+        self.start.start == other.start.start
     }
 }
 impl Eq for MapRange {}
 impl PartialOrd for MapRange {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // no idea why i have to clone :\
-        Some(self.start.clone().cmp(other.start.clone()))
+        self.start.start.partial_cmp(&other.start.start)
     }
 }
 impl Ord for MapRange {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.cmp(other)
+        self.start.start.cmp(&other.start.start)
     }
 }
 
-fn solve_1(input: &str) -> u32 {
-    let mut result = 0;
+fn solve_1(input: &str) -> u64 {
     let mut lines = input.lines();
 
     let mut seeds: Vec<_> = lines.next().unwrap()[7..]
         .split_whitespace()
-        .map(|s| s.parse::<u32>().unwrap())
+        .map(|s| s.parse::<u64>().unwrap())
         .collect();
     seeds.sort();
     let rules: Vec<_> = lines.skip(1).filter(|l| !l.is_empty()).collect();
     // process the blocks
-    let mut blocks: Vec<Vec<MapRange>> = vec![];
+    let mut blocks: VecDeque<Vec<MapRange>> = VecDeque::new();
 
-    for rule_line in rules.iter() {
+    for (index, rule_line) in rules.iter().enumerate() {
         // this is fine since its always ascii chars
         if rule_line[rule_line.len() - 1..rule_line.len()] == *":" {
             // block start
-            if let Some(last_blocks) = blocks.last_mut() {
+            if let Some(last_blocks) = blocks.get_mut((blocks.len() as i32 - 1) as usize) {
                 last_blocks.sort()
             }
-            blocks.push(vec![]);
+            blocks.push_back(vec![]);
         } else {
             let mut lines = rule_line.split_whitespace();
-            let end = lines.next().unwrap().parse::<u32>().unwrap();
-            let start = lines.next().unwrap().parse::<u32>().unwrap();
-            let span = lines.next().unwrap().parse::<u32>().unwrap();
+            let end = lines.next().unwrap().parse::<u64>().unwrap();
+            let start = lines.next().unwrap().parse::<u64>().unwrap();
+            let span = lines.next().unwrap().parse::<u64>().unwrap();
 
-            if let Some(last_blocks) = blocks.last_mut() {
+            if let Some(last_blocks) = blocks.get_mut(blocks.len() - 1) {
                 last_blocks.push(MapRange {
                     start: Range {
-                        start: start,
-                        end: start + span + 1,
+                        start,
+                        end: start + span,
                     },
-                    end: Range {
-                        start: end,
-                        end: end + span + 1,
-                    },
+                    end_start: end,
                 })
             }
         }
     }
-    println!("{blocks:?} last bock");
 
-    result
+    println!("BLOCKS LEN {} \n\n {blocks:?} - {seeds:?}", blocks.len());
+    // Consume the blocks and transform the numbers
+    while blocks.len() > 0 {
+        let transform = blocks.pop_front().unwrap();
+        let mut t_index = 0;
+        seeds.sort();
+        for seed in seeds.iter_mut() {
+            while t_index < transform.len()
+                && !transform[t_index].start.contains(seed)
+                && transform[t_index].start.end < *seed
+            {
+                println!(
+                    "UPPING THE TX_INDEX - {t_index} {seed} {}",
+                    transform[t_index].start.end
+                );
+                t_index += 1;
+            }
+            if t_index < transform.len() && transform[t_index].start.contains(seed) {
+                *seed = transform[t_index].end_start + (*seed - transform[t_index].start.start)
+            } else {
+                continue;
+            }
+        }
+    }
+    println!("{seeds:?}");
+
+    *seeds.iter().min().unwrap()
 }
