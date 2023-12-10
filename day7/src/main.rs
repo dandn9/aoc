@@ -12,8 +12,8 @@ impl Error for AOCError {}
 fn main() {
     let input_1 = include_str!("input_1.txt");
     println!("---RESULT_1---");
-    let result_1 = solve_1(input_1);
-    println!("{}", result_1.unwrap());
+    // let result_1 = solve_1(input_1);
+    // println!("{}", result_1.unwrap());
     println!("---RESULT_2---");
     let result_2 = solve_2(input_1);
     println!("{}", result_2.unwrap());
@@ -60,7 +60,13 @@ impl HandTypes {
 
         let mut cards_buckets: Vec<Vec<Cards>> = vec![];
 
+        let mut joker_cards = 0;
+
         for card in cards.iter() {
+            if *card == Cards::J {
+                joker_cards += 1;
+                continue;
+            }
             let mut to_add_new = true;
             // this is fine since it's only max 5 cards
             for bucket in cards_buckets.iter_mut() {
@@ -81,6 +87,13 @@ impl HandTypes {
                 different_types += 1;
             }
         }
+
+        if same_types == 0 && joker_cards > 0 {
+            same_types += 1;
+            different_types -= i32::max(0, different_types - joker_cards)
+        }
+        println!("{same_types}, {different_types}");
+
         let cards: [Cards; 5] = [
             cards[0].clone(),
             cards[1].clone(),
@@ -146,16 +159,16 @@ enum Cards {
     A = 12,
     K = 11,
     Q = 10,
-    J = 9,
-    T = 8,
-    Nine = 7,
-    Eight = 6,
-    Seven = 5,
-    Six = 4,
-    Five = 3,
-    Four = 2,
-    Three = 1,
-    Two = 0,
+    T = 9,
+    Nine = 8,
+    Eight = 7,
+    Seven = 6,
+    Six = 5,
+    Five = 4,
+    Four = 3,
+    Three = 2,
+    Two = 1,
+    J = 0,
 }
 #[derive(Debug)]
 struct Game(HandTypes, u64);
@@ -182,7 +195,26 @@ fn solve_1(input: &str) -> Result<u64, Box<dyn Error>> {
     Ok(result)
 }
 fn solve_2(input: &str) -> Result<u64, Box<dyn Error>> {
-    todo!()
+    let mut games: Vec<Game> = vec![];
+
+    for line in input.lines() {
+        let mut l = line.split_whitespace();
+        let hand = l.next().ok_or(AOCError)?;
+        let bid = l.next().ok_or(AOCError)?;
+
+        games.push(Game(HandTypes::from_str(hand), bid.parse()?));
+    }
+
+    games.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut result = 0;
+    println!("GAMES! \n {games:?}");
+
+    for (i, game) in games.iter().enumerate() {
+        result += (i + 1) as u64 * game.1
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -200,7 +232,11 @@ QQQJA 483"#;
     }
     #[test]
     fn test_solve_2() {
-        let input = r#""#;
-        assert_eq!(solve_2(input).unwrap(), todo!());
+        let input = r#"32T3K 765
+T55J5 684
+KK677 28
+KTJJT 220
+QQQJA 483"#;
+        assert_eq!(solve_2(input).unwrap(), 5905);
     }
 }
