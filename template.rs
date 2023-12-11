@@ -19,10 +19,10 @@ fn main() {
     println!("{}", result_2.unwrap());
 }
 
-fn solve_1(input: &str) -> Result<u64, Box<dyn Error>> {
+fn solve_1(input: &str) -> Result<i64, Box<dyn Error>> {
     todo!()
 }
-fn solve_2(input: &str) -> Result<u64, Box<dyn Error>> {
+fn solve_2(input: &str) -> Result<i64, Box<dyn Error>> {
     todo!()
 }
 
