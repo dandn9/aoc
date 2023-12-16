@@ -82,7 +82,7 @@ fn solve_1(input: &str) -> Result<i64, Box<dyn Error>> {
         };
     }
 
-    let median = f32::floor(walk_scores.len() as f32 / 2.0 - 1.0) as i64;
+    let median = f32::floor((walk_scores.len() - 1) as f32 / 2.0) as i64;
 
     Ok(walk_scores[median as usize] as i64)
 
